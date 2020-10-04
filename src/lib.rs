@@ -75,6 +75,7 @@ impl Coconuts {
     }
 }
 
+// Contract view citizen accessors
 #[near_bindgen]
 impl Coconuts {
     pub fn init_block_index(&self, account_id: &AccountId) -> U64 {
