@@ -13,63 +13,51 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Coconuts {
-    accounts: LookupMap<AccountId, CoconutAccount>,
+    citizens: LookupMap<AccountId, Citizen>,
 }
 
 impl Default for Coconuts {
     fn default() -> Coconuts {
         Coconuts {
-            accounts: LookupMap::new(Vec::from(b"accounts".as_ref())),
+            citizens: LookupMap::new(Vec::from(b"citizens".as_ref())),
         }
     }
 }
 
 #[near_bindgen]
 impl Coconuts {
-    pub fn signer_have_account(&self) -> bool {
+    pub fn signer_create_citizen(&mut self) {
         let account_id = env::signer_account_id();
-        self.have_account(&account_id)
-    }
-
-    pub fn signer_create_account(&mut self) {
-        let account_id = env::signer_account_id();
-        if self.have_account(&account_id) {
+        if self.is_citizen(&account_id) {
             env::panic(b"Account already exists");
         }
-        let new_account = CoconutAccount::default();
-        self.accounts.insert(&account_id, &new_account);
+        let new_account = Citizen::default();
+        self.citizens.insert(&account_id, &new_account);
     }
 }
 
 #[near_bindgen]
 impl Coconuts {
-    pub fn have_account(&self, account_id: &AccountId) -> bool {
-        self.accounts.contains_key(account_id)
+    pub fn is_citizen(&self, account_id: &AccountId) -> bool {
+        self.citizens.contains_key(account_id)
     }
 
     pub fn init_block_index(&self, account_id: &AccountId) -> U64 {
-        U64(self.account(account_id).init_block_index)
+        U64(self.citizen(account_id).init_block_index)
     }
 
     pub fn init_coconut_balance(&self, account_id: &AccountId) -> U128 {
-        U128(self.account(account_id).init_coconut_balance)
+        U128(self.citizen(account_id).init_coconut_balance)
     }
 
     pub fn coconut_balance(&self, account_id: &AccountId) -> U128 {
-        U128(self.account(account_id).coconut_balance())
+        U128(self.citizen(account_id).coconut_balance())
     }
 }
 
 impl Coconuts {
-    fn signer_account(&self) -> CoconutAccount {
-        let account_id = env::signer_account_id();
-        self.account(&account_id)
-    }
-}
-
-impl Coconuts {
-    fn account(&self, account_id: &AccountId) -> CoconutAccount {
-        if let Some(account) = self.accounts.get(account_id) {
+    fn citizen(&self, account_id: &AccountId) -> Citizen {
+        if let Some(account) = self.citizens.get(account_id) {
             account
         } else {
             env::panic(b"Account does not exist")
@@ -79,21 +67,21 @@ impl Coconuts {
 
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct CoconutAccount {
+pub struct Citizen {
     init_block_index: BlockHeight,
     init_coconut_balance: Balance,
 }
 
-impl Default for CoconutAccount {
-    fn default() -> CoconutAccount {
-        CoconutAccount {
+impl Default for Citizen {
+    fn default() -> Citizen {
+        Citizen {
             init_block_index: env::block_index(),
             init_coconut_balance: 0,
         }
     }
 }
 
-impl CoconutAccount {
+impl Citizen {
     fn coconut_balance(&self) -> Balance {
         let block_index = env::block_index();
         assert!(block_index >= self.init_block_index);
