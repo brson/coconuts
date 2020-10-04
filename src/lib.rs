@@ -82,10 +82,6 @@ impl Coconuts {
         U64(self.citizen(account_id).init_block_index)
     }
 
-    pub fn init_coconut_balance(&self, account_id: &AccountId) -> U128 {
-        U128(self.citizen(account_id).init_young_coconut_balance)
-    }
-
     pub fn young_coconut_balance(&self, account_id: &AccountId) -> U128 {
         U128(self.citizen(account_id).young_coconut_balance())
     }
@@ -98,42 +94,41 @@ impl Coconuts {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Citizen {
     init_block_index: BlockHeight,
-    init_young_coconut_balance: Balance,
 }
 
 impl Default for Citizen {
     fn default() -> Citizen {
         Citizen {
             init_block_index: env::block_index(),
-            init_young_coconut_balance: 0,
         }
     }
 }
 
+const INITIAL_COCONUTS: u128 = 0;
 /// Young coconuts generated each block
 const COCONUTS_PER_BLOCK: u128 = 1;
 /// Blocks until a young coconut becomes a brown coconut
 const COCONUT_MATURATION_BLOCKS: u128 = 10;
 
 impl Citizen {
-    fn young_coconut_balance(&self) -> Balance {
+    fn baseline_coconuts(&self) -> Balance {
         let block_index = env::block_index();
         assert!(block_index >= self.init_block_index);
         let diff_block_index = block_index - self.init_block_index;
         let diff_block_index = u128::from(diff_block_index);
-        let coconuts_since_init = diff_block_index * COCONUTS_PER_BLOCK;
-        let baseline_coconuts = self.init_young_coconut_balance.checked_add(coconuts_since_init).expect("overflow");
+        let coconuts_since_init = diff_block_index.checked_mul(COCONUTS_PER_BLOCK).expect("overflow");
+        INITIAL_COCONUTS.checked_add(coconuts_since_init).expect("overflow")
+    }
+
+    fn young_coconut_balance(&self) -> Balance {
+        let baseline_coconuts = self.baseline_coconuts();
         assert!(self.brown_coconut_balance() <= baseline_coconuts);
         baseline_coconuts.checked_sub(self.brown_coconut_balance()).expect("overflow")
     }
 
     fn brown_coconut_balance(&self) -> Balance {
-        let block_index = env::block_index();
-        assert!(block_index >= self.init_block_index);
-        let diff_block_index = block_index - self.init_block_index;
-        let diff_block_index = u128::from(diff_block_index);
-        let coconuts_since_init = diff_block_index * COCONUTS_PER_BLOCK;
-        coconuts_since_init.saturating_sub(COCONUT_MATURATION_BLOCKS).checked_mul(COCONUTS_PER_BLOCK).expect("overflow")
+        let baseline_coconuts = self.baseline_coconuts();
+        baseline_coconuts.saturating_sub(COCONUT_MATURATION_BLOCKS).checked_mul(COCONUTS_PER_BLOCK).expect("overflow")
     }
 }
 
