@@ -88,6 +88,10 @@ impl Coconuts {
     pub fn young_coconut_balance(&self, account_id: &AccountId) -> U128 {
         U128(self.citizen(account_id).young_coconut_balance())
     }
+
+    pub fn brown_coconut_balance(&self, account_id: &AccountId) -> U128 {
+        U128(self.citizen(account_id).brown_coconut_balance())
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -105,14 +109,30 @@ impl Default for Citizen {
     }
 }
 
+/// Young coconuts generated each block
+const COCONUTS_PER_BLOCK: u128 = 1;
+/// Blocks until a young coconut becomes a brown coconut
+const COCONUT_MATURATION_BLOCKS: u128 = 10;
+
 impl Citizen {
     fn young_coconut_balance(&self) -> Balance {
         let block_index = env::block_index();
         assert!(block_index >= self.init_block_index);
         let diff_block_index = block_index - self.init_block_index;
         let diff_block_index = u128::from(diff_block_index);
-        assert!(u128::max_value() - diff_block_index > self.init_young_coconut_balance);
-        self.init_young_coconut_balance + diff_block_index
+        let coconuts_since_init = diff_block_index * COCONUTS_PER_BLOCK;
+        let baseline_coconuts = self.init_young_coconut_balance.checked_add(coconuts_since_init).expect("overflow");
+        assert!(self.brown_coconut_balance() <= baseline_coconuts);
+        baseline_coconuts.checked_sub(self.brown_coconut_balance()).expect("overflow")
+    }
+
+    fn brown_coconut_balance(&self) -> Balance {
+        let block_index = env::block_index();
+        assert!(block_index >= self.init_block_index);
+        let diff_block_index = block_index - self.init_block_index;
+        let diff_block_index = u128::from(diff_block_index);
+        let coconuts_since_init = diff_block_index * COCONUTS_PER_BLOCK;
+        coconuts_since_init.saturating_sub(COCONUT_MATURATION_BLOCKS).checked_mul(COCONUTS_PER_BLOCK).expect("overflow")
     }
 }
 
@@ -183,4 +203,26 @@ mod tests {
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 1);
     }
 
+    #[test]
+    fn coconut_balance_after_maturation() {
+        let context = get_context(vec![], false, 0);
+        testing_env!(context);
+        let mut contract = Coconuts::default();
+        contract.signer_create_citizen();
+
+        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 0);
+        assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 0);
+
+        let context = get_context(vec![], false, 11);
+        testing_env!(context);
+
+        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 10);
+        assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 1);
+
+        let context = get_context(vec![], false, 20);
+        testing_env!(context);
+
+        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 10);
+        assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 10);
+    }
 }
