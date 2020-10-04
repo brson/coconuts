@@ -111,6 +111,7 @@ impl Citizen {
         assert!(block_index >= self.init_block_index);
         let diff_block_index = block_index - self.init_block_index;
         let diff_block_index = u128::from(diff_block_index);
+        assert!(u128::max_value() - diff_block_index > self.init_young_coconut_balance);
         self.init_young_coconut_balance + diff_block_index
     }
 }
