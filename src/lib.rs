@@ -82,36 +82,36 @@ impl Coconuts {
     }
 
     pub fn init_coconut_balance(&self, account_id: &AccountId) -> U128 {
-        U128(self.citizen(account_id).init_coconut_balance)
+        U128(self.citizen(account_id).init_young_coconut_balance)
     }
 
-    pub fn coconut_balance(&self, account_id: &AccountId) -> U128 {
-        U128(self.citizen(account_id).coconut_balance())
+    pub fn young_coconut_balance(&self, account_id: &AccountId) -> U128 {
+        U128(self.citizen(account_id).young_coconut_balance())
     }
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Citizen {
     init_block_index: BlockHeight,
-    init_coconut_balance: Balance,
+    init_young_coconut_balance: Balance,
 }
 
 impl Default for Citizen {
     fn default() -> Citizen {
         Citizen {
             init_block_index: env::block_index(),
-            init_coconut_balance: 0,
+            init_young_coconut_balance: 0,
         }
     }
 }
 
 impl Citizen {
-    fn coconut_balance(&self) -> Balance {
+    fn young_coconut_balance(&self) -> Balance {
         let block_index = env::block_index();
         assert!(block_index >= self.init_block_index);
         let diff_block_index = block_index - self.init_block_index;
         let diff_block_index = u128::from(diff_block_index);
-        self.init_coconut_balance + diff_block_index
+        self.init_young_coconut_balance + diff_block_index
     }
 }
 
@@ -168,18 +168,18 @@ mod tests {
     }
 
     #[test]
-    fn coconut_balance() {
+    fn young_coconut_balance() {
         let context = get_context(vec![], false, 0);
         testing_env!(context);
         let mut contract = Coconuts::default();
         contract.signer_create_citizen();
 
-        assert_eq!(contract.coconut_balance(&signer_name()).0, 0);
+        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 0);
 
         let context = get_context(vec![], false, 1);
         testing_env!(context);
 
-        assert_eq!(contract.coconut_balance(&signer_name()).0, 1);
+        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 1);
     }
 
 }
