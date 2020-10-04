@@ -9,21 +9,27 @@ use near_sdk::BlockHeight;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+pub type CitizenId = u64;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Coconuts {
-    citizens: LookupMap<AccountId, Citizen>,
+    accounts: LookupMap<AccountId, CitizenId>,
+    citizens: LookupMap<CitizenId, Citizen>,
+    next_citizen_id: u64,
 }
 
 impl Default for Coconuts {
     fn default() -> Coconuts {
         Coconuts {
+            accounts: LookupMap::new(Vec::from(b"accounts".as_ref())),
             citizens: LookupMap::new(Vec::from(b"citizens".as_ref())),
+            next_citizen_id: 0,
         }
     }
 }
 
+// Contract payable account management
 #[near_bindgen]
 impl Coconuts {
     pub fn signer_create_citizen(&mut self) {
@@ -31,17 +37,46 @@ impl Coconuts {
         if self.is_citizen(&account_id) {
             env::panic(b"Account already exists");
         }
-        let new_account = Citizen::default();
-        self.citizens.insert(&account_id, &new_account);
+        let new_citizen_id = self.next_citizen_id;
+        assert!(!self.citizens.contains_key(&new_citizen_id));
+        let new_citizen = Citizen::default();
+        self.citizens.insert(&new_citizen_id, &new_citizen);
+        self.accounts.insert(&account_id, &new_citizen_id);
+        assert!(self.next_citizen_id < u64::max_value());
+        self.next_citizen_id += 1;
+    }
+}
+
+// Contract view account management
+#[near_bindgen]
+impl Coconuts {
+    pub fn is_citizen(&self, account_id: &AccountId) -> bool {
+        if let Some(citizen_id) = self.accounts.get(account_id) {
+            assert!(self.citizens.contains_key(&citizen_id));
+            true
+        } else {
+            false
+        }
+    }
+}
+
+// Account management helpers
+impl Coconuts {
+    fn citizen(&self, account_id: &AccountId) -> Citizen {
+        if let Some(citizen_id) = self.accounts.get(account_id) {
+            if let Some(account) = self.citizens.get(&citizen_id) {
+                account
+            } else {
+                env::panic(b"Account is not a citizen");
+            }
+        } else {
+            env::panic(b"Account does not exist");
+        }
     }
 }
 
 #[near_bindgen]
 impl Coconuts {
-    pub fn is_citizen(&self, account_id: &AccountId) -> bool {
-        self.citizens.contains_key(account_id)
-    }
-
     pub fn init_block_index(&self, account_id: &AccountId) -> U64 {
         U64(self.citizen(account_id).init_block_index)
     }
@@ -54,17 +89,6 @@ impl Coconuts {
         U128(self.citizen(account_id).coconut_balance())
     }
 }
-
-impl Coconuts {
-    fn citizen(&self, account_id: &AccountId) -> Citizen {
-        if let Some(account) = self.citizens.get(account_id) {
-            account
-        } else {
-            env::panic(b"Account does not exist")
-        }
-    }
-}
-
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Citizen {
