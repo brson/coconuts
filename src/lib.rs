@@ -95,9 +95,67 @@ impl Citizen {
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
+    use super::*;
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, VMContext};
 
-    use super::*;
+    static SIGNER_NAME: &'static str = "bob_near";
+
+    fn signer_name() -> String {
+        SIGNER_NAME.to_string()
+    }
+
+    fn get_context(input: Vec<u8>, is_view: bool, block_index: u64) -> VMContext {
+        VMContext {
+            current_account_id: "alice_near".to_string(),
+            signer_account_id: signer_name(),
+            signer_account_pk: vec![0, 1, 2],
+            predecessor_account_id: "carol_near".to_string(),
+            input,
+            block_index,
+            block_timestamp: 0,
+            account_balance: 0,
+            account_locked_balance: 0,
+            storage_usage: 0,
+            attached_deposit: 0,
+            prepaid_gas: 10u64.pow(18),
+            random_seed: vec![0, 1, 2],
+            is_view,
+            output_data_receivers: vec![],
+            epoch_height: 0,
+        }
+    }
+
+    #[test]
+    fn no_citizen() {
+        let context = get_context(vec![], false, 0);
+        testing_env!(context);
+        let contract = Coconuts::default();
+        assert!(!contract.is_citizen(&signer_name()));
+    }
+
+    #[test]
+    fn create_citizen() {
+        let context = get_context(vec![], false, 0);
+        testing_env!(context);
+        let mut contract = Coconuts::default();
+        contract.signer_create_citizen();
+        assert!(contract.is_citizen(&signer_name()));
+    }
+
+    #[test]
+    fn coconut_balance() {
+        let context = get_context(vec![], false, 0);
+        testing_env!(context);
+        let mut contract = Coconuts::default();
+        contract.signer_create_citizen();
+
+        assert_eq!(contract.coconut_balance(&signer_name()).0, 0);
+
+        let context = get_context(vec![], false, 1);
+        testing_env!(context);
+
+        assert_eq!(contract.coconut_balance(&signer_name()).0, 1);
+    }
 
 }
