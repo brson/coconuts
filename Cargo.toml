@@ -9,6 +9,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 near-sdk = "2.0.0"
+serde = "1.0.116"
 
 [profile.dev]
 opt-level = 1

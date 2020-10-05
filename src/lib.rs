@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::json_types::{U128, U64};
@@ -89,6 +90,33 @@ impl Coconuts {
     pub fn brown_coconut_balance(&self, account_id: &AccountId) -> U128 {
         U128(self.citizen(account_id).brown_coconut_balance())
     }
+
+    pub fn citizen_state(&self, account_id: &AccountId) -> CitizenState {
+        let citizen = self.citizen(account_id);
+        let citizen_id = self.accounts.get(account_id).expect("citizen");
+        let block_index = env::block_index();
+        assert!(block_index >= citizen.init_block_index);
+        CitizenState {
+            account_id: account_id.clone(),
+            citizen_id: U64(citizen_id),
+            current_block_index: U64(block_index),
+            init_block_index: U64(citizen.init_block_index),
+            block_age: U64(block_index - citizen.init_block_index),
+            young_coconut_balance: U128(citizen.young_coconut_balance()),
+            brown_coconut_balance: U128(citizen.brown_coconut_balance()),
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct CitizenState {
+    account_id: AccountId,
+    citizen_id: U64,
+    current_block_index: U64,
+    init_block_index: U64,
+    block_age: U64,
+    young_coconut_balance: U128,
+    brown_coconut_balance: U128,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
