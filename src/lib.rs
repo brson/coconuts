@@ -132,6 +132,13 @@ pub struct CitizenState {
 impl Coconuts {
     pub fn signer_transfer_young_coconuts(&mut self, account_id_to: &AccountId, qty: U128) {
         let account_id_from = env::signer_account_id();
+        self.transfer_young_coconuts(&account_id_from, account_id_to, qty.0)
+    }
+}
+
+// Asset transfer helpers
+impl Coconuts {
+    fn transfer_young_coconuts(&mut self, account_id_from: &AccountId, account_id_to: &AccountId, qty: u128) {
         if !self.is_citizen(&account_id_from) {
             env::panic(b"Signer account is not a citizen");
         }
@@ -145,18 +152,18 @@ impl Coconuts {
         let balance_from = citizen_from.young_coconut_balance();
         let balance_to = citizen_to.young_coconut_balance();
 
-        if balance_from.checked_sub(qty.0).is_none() {
+        if balance_from.checked_sub(qty).is_none() {
             env::panic(b"Transfer quantity less than balance");
         }
 
-        if balance_to.checked_add(qty.0).is_none()  {
+        if balance_to.checked_add(qty).is_none()  {
             env::panic(b"Transfer overflows receiver");
         }
 
         citizen_from.young_coconut_adjustments.sent +=
-            citizen_from.young_coconut_adjustments.sent.checked_add(qty.0).expect("overflow");
+            citizen_from.young_coconut_adjustments.sent.checked_add(qty).expect("overflow");
         citizen_to.young_coconut_adjustments.received +=
-            citizen_to.young_coconut_adjustments.received.checked_add(qty.0).expect("overflow");
+            citizen_to.young_coconut_adjustments.received.checked_add(qty).expect("overflow");
 
         self.set_citizen(&account_id_from, &citizen_from);
         self.set_citizen(&account_id_to, &citizen_to);
