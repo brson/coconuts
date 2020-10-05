@@ -240,13 +240,13 @@ mod tests {
         SIGNER_NAME.to_string()
     }
 
-    fn get_context(input: Vec<u8>, is_view: bool, block_index: u64) -> VMContext {
+    fn get_context(is_view: bool, block_index: u64) -> VMContext {
         VMContext {
             current_account_id: "alice_near".to_string(),
             signer_account_id: signer_name(),
             signer_account_pk: vec![0, 1, 2],
             predecessor_account_id: "carol_near".to_string(),
-            input,
+            input: vec![],
             block_index,
             block_timestamp: 0,
             account_balance: 0,
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn no_citizen() {
-        let context = get_context(vec![], false, 0);
+        let context = get_context(false, 0);
         testing_env!(context);
         let contract = Coconuts::default();
         assert!(!contract.is_citizen(&signer_name()));
@@ -271,7 +271,7 @@ mod tests {
 
     #[test]
     fn create_citizen() {
-        let context = get_context(vec![], false, 0);
+        let context = get_context(false, 0);
         testing_env!(context);
         let mut contract = Coconuts::default();
         contract.signer_create_citizen();
@@ -280,14 +280,14 @@ mod tests {
 
     #[test]
     fn young_coconut_balance() {
-        let context = get_context(vec![], false, 0);
+        let context = get_context(false, 0);
         testing_env!(context);
         let mut contract = Coconuts::default();
         contract.signer_create_citizen();
 
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 0);
 
-        let context = get_context(vec![], false, 1);
+        let context = get_context(false, 1);
         testing_env!(context);
 
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 1);
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn coconut_balance_after_maturation() {
-        let context = get_context(vec![], false, 0);
+        let context = get_context(false, 0);
         testing_env!(context);
         let mut contract = Coconuts::default();
         contract.signer_create_citizen();
@@ -303,13 +303,13 @@ mod tests {
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 0);
         assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 0);
 
-        let context = get_context(vec![], false, 11);
+        let context = get_context(false, 11);
         testing_env!(context);
 
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 10);
         assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 1);
 
-        let context = get_context(vec![], false, 20);
+        let context = get_context(false, 20);
         testing_env!(context);
 
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 10);
