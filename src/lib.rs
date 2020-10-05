@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn no_citizen() {
-        let context = get_context(false, 0);
+        let context = get_context(true, 0);
         testing_env!(context);
         let contract = Coconuts::default();
         assert!(!contract.is_citizen(&signer_name()));
@@ -287,7 +287,7 @@ mod tests {
 
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 0);
 
-        let context = get_context(false, 1);
+        let context = get_context(true, 1);
         testing_env!(context);
 
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 1);
@@ -303,13 +303,13 @@ mod tests {
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 0);
         assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 0);
 
-        let context = get_context(false, 11);
+        let context = get_context(true, 11);
         testing_env!(context);
 
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 10);
         assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 1);
 
-        let context = get_context(false, 20);
+        let context = get_context(true, 20);
         testing_env!(context);
 
         assert_eq!(contract.young_coconut_balance(&signer_name()).0, 10);
