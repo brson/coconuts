@@ -234,16 +234,22 @@ mod tests {
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, VMContext};
 
-    static SIGNER_NAME: &'static str = "bob_near";
+    static SIGNER1_ID: &'static str = "s1";
 
-    fn signer_name() -> String {
-        SIGNER_NAME.to_string()
+    fn signer1_id() -> String {
+        SIGNER1_ID.to_string()
     }
 
-    fn get_context(is_view: bool, block_index: u64) -> VMContext {
+    static SIGNER2_ID: &'static str = "s2";
+
+    fn signer2_id() -> String {
+        SIGNER2_ID.to_string()
+    }
+
+    fn get_context(is_view: bool, block_index: u64, signer: String) -> VMContext {
         VMContext {
             current_account_id: "alice_near".to_string(),
-            signer_account_id: signer_name(),
+            signer_account_id: signer,
             signer_account_pk: vec![0, 1, 2],
             predecessor_account_id: "carol_near".to_string(),
             input: vec![],
@@ -263,56 +269,56 @@ mod tests {
 
     #[test]
     fn no_citizen() {
-        let context = get_context(true, 0);
+        let context = get_context(true, 0, signer1_id());
         testing_env!(context);
         let contract = Coconuts::default();
-        assert!(!contract.is_citizen(&signer_name()));
+        assert!(!contract.is_citizen(&signer1_id()));
     }
 
     #[test]
     fn create_citizen() {
-        let context = get_context(false, 0);
+        let context = get_context(false, 0, signer1_id());
         testing_env!(context);
         let mut contract = Coconuts::default();
         contract.signer_create_citizen();
-        assert!(contract.is_citizen(&signer_name()));
+        assert!(contract.is_citizen(&signer1_id()));
     }
 
     #[test]
     fn young_coconut_balance() {
-        let context = get_context(false, 0);
+        let context = get_context(false, 0, signer1_id());
         testing_env!(context);
         let mut contract = Coconuts::default();
         contract.signer_create_citizen();
 
-        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 0);
+        assert_eq!(contract.young_coconut_balance(&signer1_id()).0, 0);
 
-        let context = get_context(true, 1);
+        let context = get_context(true, 1, signer1_id());
         testing_env!(context);
 
-        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 1);
+        assert_eq!(contract.young_coconut_balance(&signer1_id()).0, 1);
     }
 
     #[test]
     fn coconut_balance_after_maturation() {
-        let context = get_context(false, 0);
+        let context = get_context(false, 0, signer1_id());
         testing_env!(context);
         let mut contract = Coconuts::default();
         contract.signer_create_citizen();
 
-        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 0);
-        assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 0);
+        assert_eq!(contract.young_coconut_balance(&signer1_id()).0, 0);
+        assert_eq!(contract.brown_coconut_balance(&signer1_id()).0, 0);
 
-        let context = get_context(true, 11);
+        let context = get_context(true, 11, signer1_id());
         testing_env!(context);
 
-        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 10);
-        assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 1);
+        assert_eq!(contract.young_coconut_balance(&signer1_id()).0, 10);
+        assert_eq!(contract.brown_coconut_balance(&signer1_id()).0, 1);
 
-        let context = get_context(true, 20);
+        let context = get_context(true, 20, signer1_id());
         testing_env!(context);
 
-        assert_eq!(contract.young_coconut_balance(&signer_name()).0, 10);
-        assert_eq!(contract.brown_coconut_balance(&signer_name()).0, 10);
+        assert_eq!(contract.young_coconut_balance(&signer1_id()).0, 10);
+        assert_eq!(contract.brown_coconut_balance(&signer1_id()).0, 10);
     }
 }
