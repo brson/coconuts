@@ -74,6 +74,14 @@ impl Coconuts {
             env::panic(b"Account does not exist");
         }
     }
+
+    fn set_citizen(&mut self, account_id: &AccountId, citizen: &Citizen) {
+        if let Some(citizen_id) = self.accounts.get(account_id) {
+            self.citizens.insert(&citizen_id, citizen);
+        } else {
+            env::panic(b"Account does not exist");
+        }
+    }
 }
 
 // Contract view citizen accessors
@@ -119,21 +127,70 @@ pub struct CitizenState {
     brown_coconut_balance: U128,
 }
 
+// Contract payable asset transfers
+#[near_bindgen]
+impl Coconuts {
+    pub fn signer_transfer_young_coconuts(&mut self, account_id_to: &AccountId, qty: U128) {
+        let account_id_from = env::signer_account_id();
+        if !self.is_citizen(&account_id_from) {
+            env::panic(b"Signer account is not a citizen");
+        }
+        if !self.is_citizen(&account_id_to) {
+            env::panic(b"Destination account is not a citizen");
+        }
+
+        let mut citizen_from = self.citizen(&account_id_from);
+        let mut citizen_to = self.citizen(&account_id_to);
+
+        let balance_from = citizen_from.young_coconut_balance();
+        let balance_to = citizen_to.young_coconut_balance();
+
+        if balance_from.checked_sub(qty.0).is_none() {
+            env::panic(b"Transfer quantity less than balance");
+        }
+
+        if balance_to.checked_add(qty.0).is_none()  {
+            env::panic(b"Transfer overflows receiver");
+        }
+
+        citizen_from.young_coconut_adjustments.sent +=
+            citizen_from.young_coconut_adjustments.sent.checked_add(qty.0).expect("overflow");
+        citizen_to.young_coconut_adjustments.received +=
+            citizen_to.young_coconut_adjustments.received.checked_add(qty.0).expect("overflow");
+
+        self.set_citizen(&account_id_from, &citizen_from);
+        self.set_citizen(&account_id_to, &citizen_to);
+    }
+}
+
+
+
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Citizen {
     init_block_index: BlockHeight,
+    coconut_tree_count: u128,
+    young_coconut_adjustments: Adjustments,
 }
 
 impl Default for Citizen {
     fn default() -> Citizen {
         Citizen {
             init_block_index: env::block_index(),
+            coconut_tree_count: 1,
+            young_coconut_adjustments: Adjustments::default(),
         }
     }
 }
 
+#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(Default)]
+pub struct Adjustments {
+    pub sent: u128,
+    pub received: u128,
+}
+
 const INITIAL_COCONUTS: u128 = 0;
-/// Young coconuts generated each block
+/// Young coconuts generated each block, per tree
 const COCONUTS_PER_BLOCK: u128 = 1;
 /// Blocks until a young coconut becomes a brown coconut
 const COCONUT_MATURATION_BLOCKS: u128 = 10;
@@ -144,7 +201,9 @@ impl Citizen {
         assert!(block_index >= self.init_block_index);
         let diff_block_index = block_index - self.init_block_index;
         let diff_block_index = u128::from(diff_block_index);
-        let coconuts_since_init = diff_block_index.checked_mul(COCONUTS_PER_BLOCK).expect("overflow");
+        let coconuts_since_init = diff_block_index
+            .checked_mul(self.coconut_tree_count).expect("overflow")
+            .checked_mul(COCONUTS_PER_BLOCK).expect("overflow");
         INITIAL_COCONUTS.checked_add(coconuts_since_init).expect("overflow")
     }
 
